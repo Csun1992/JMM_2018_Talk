@@ -1,0 +1,338 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Date: February 3, 2017
+% Location: CASPER @ Baylor University
+% Length: 45 minutes
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass{beamer}
+
+\mode<presentation> {
+  	\usetheme{CambridgeUS}
+	\usecolortheme{baylorbears}
+}
+
+\definecolor{BaylorGreen}{RGB}{0,72,51}
+\definecolor{BaylorGold}{RGB}{253,187,48}
+\newcommand{\green}{\color{BaylorGreen}}
+\newcommand{\gold}{\color{BaylorGold}}
+
+%%%%If you want an INTERLOCKING BU in the top corner uncomment this%%%
+\addtobeamertemplate{frametitle}{}{%
+\begin{textblock*}{20mm}(0.97\textwidth,-0.75cm)
+\includegraphics[scale=0.09]{BU_Interlock.eps}
+\end{textblock*}}
+
+%\addtobeamertemplate{frametitle}{}{%
+%\begin{textblock*}{20mm}(0.96\textwidth,-0.79cm)
+%\includegraphics[scale=0.05]{BUpaw.eps}
+%\end{textblock*}}
+
+%\addtobeamertemplate{frametitle}{}{%
+%\begin{textblock*}{20mm}(0.84\textwidth,-0.63cm)
+%\includegraphics[scale=0.15]{BLogo.eps}
+%\end{textblock*}}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{epstopdf}
+\usepackage{textpos}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{epsfig}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{euscript}
+\usepackage[english]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage{times}
+\usepackage{tikz}
+\usepackage[T1]{fontenc}
+\title[CASPER @ Baylor University]{A mixed  up-downwind
+scheme for solving \\ a Heston stochastic volatility model \\ on variable grids}
+\author[Chong Sun]{Chong Sun \\\vspace{1mm} \tiny\textit{jointly with Dr. Q. Sheng}}
+\institute[]{Department of Mathematics\\ Center for Astrophysics, Space Physics and Engineering Research\\Baylor University\\~\\ \includegraphics[scale=0.5]{BULogo.eps}}
+\date{{January 13th, 2018}}
+
+\subject{The Talk}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%              My Commands
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newtheorem{thm}{Theorem}
+\newcommand{\ben}{\begin{enumerate}}
+\newcommand{\een}{\end{enumerate}}
+\newcommand{\bit}{\begin{itemize}}
+\newcommand{\eit}{\end{itemize}}
+
+\newcommand{\mypm}{\mathbin{\tikz [x=1.4ex,y=1.4ex,line width=.1ex] \draw (0.0,0) -- (1.0,0) (0.5,0.08) -- (0.5,0.92) (0.0,0.5) -- (1.0,0.5);}}%
+
+\newcommand{\bigo}[1]{\left( #1 \right) }
+\newcommand{\no}{\noindent}
+\newcommand{\norm}[1]{\l|\l| #1 \r|\r|}
+
+\newcommand{\vb}[1]{\textbf{#1}}
+\newcommand{\bb}[1]{\begin{equation}\label{#1}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\bbb}{\begin{eqnarray}}
+\newcommand{\eee}{\end{eqnarray}}
+\newcommand{\bbbb}{\begin{eqnarray*}}
+\newcommand{\eeee}{\end{eqnarray*}}
+\newcommand{\nnn}{\nonumber}
+\everymath{\displaystyle}
+% Appendix Commands
+\def \func {\mathrm}\def \limfunc {\mathrm}
+\def\l{\left}
+\def\r{\right}
+\def\TT{\mathbb{T}}
+\def\RR{\mathbb{R}}
+\def\CC{\mathbb{C}}
+\def\AA{{\cal{A}}}
+\def\DD{{\cal{D}}}
+\def\OO{{\cal{O}}}
+\def\R#1{$(\ref{#1})$}
+\newcommand{\tT}{\intercal}
+\definecolor{green1}{rgb}{0.1,0.5,0.0}
+\definecolor{blue1}{RGB}{51,78,125}
+\definecolor{brown}{RGB}{220,90,49}
+\definecolor{red1}{rgb}{0.8,0.1,0.0}
+\definecolor{orange}{rgb}{1,0.5,0}
+
+\newcommand{\darkblue}{\color{blue1}}
+\newcommand{\darkred}{\color{red1}}
+\newcommand{\orange}{\color{orange}}
+\newcommand{\blue}{\color{blue}}
+\newcommand{\red}{\color{red}}
+
+\hfuzz=0.5pt
+\vfuzz=0.5pt
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+
+\section{I.Heston Stochastic Differential Equation}
+
+ \begin{frame}
+\frametitle{Heston Stochastic Volatility Model}
+Heston proposed that stock prices $S(t)$ and the associated volatility $y(t)$ follow a Brownian motion,
+\bbbb
+\text{d}S(t) &=& \mu S(t) \text{d}t+S(t)\sqrt{y(t)}\text{d}B(t)\\
+\text{d}y(t) &=& \kappa [\eta -y(t)]\text{d}t+\sigma\sqrt{y(t)}\text{d}\tilde{B}(t)\\
+\text{d}B(t)\text{d}\tilde{B}(t) &=& \rho \text{d}t
+\eeee
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{II. Finite Difference Scheme}
+
+\begin{frame}
+\frametitle{Heston Partial Differential Equation}
+
+\bbbb
+V_\tau = \frac{1}{2}yV_{xx}+\rho \sigma yV_{xy}+\frac{1}{2}\sigma^2 yV_{yy}-\l(\frac{1}{2}y-r\r)V_x+\kappa (\eta -y)V_y,
+\eeee	
+										
+\pause
+
+\bbbb
+V(x,y,0) &=& \max\l(1-e^{x},0\r),~~~ x\in \mathbb{R},~~  y\in \mathbb{R}^+,\\
+\pause
+\lim_{x\rightarrow -\infty}V(x,y,\tau) &=& 1,~~~ y\in\mathbb{R}^+,~~ \tau\in\mathbb{R}^+,\\
+\lim_{x\rightarrow \infty}V(x,y,\tau) &=& 0,~~~ y\in\mathbb{R}^+,~~ \tau\in\mathbb{R}^+,\\
+V(x,0,\tau) &=& \max\l(1-e^{x},0\r),~~~ x\in\mathbb{R},~~ \tau\in\mathbb{R}^+.\\
+\pause
+\lim_{y\rightarrow \infty}V_y(x,y,\tau) &=& 0,~~~ x\in\mathbb{R},~~ \tau\in\mathbb{R}^+,
+\eeee
+
+\end{frame}
+
+%%%%
+
+\begin{frame}
+\frametitle{Traditional Approaches and Limitation}
+Approaches:
+\bit
+\item Central difference approximation
+\pause
+\item von Neumann method for stability analysis
+\eit
+\pause
+\vspace{3mm}
+Limitation:
+\bit
+\item von Neumann analysis can only be applied to Cauchy problems or periodic boundary conditions
+\eit
+
+\end{frame}
+
+%%%%
+
+\begin{frame}
+\frametitle{Our Approach--Mixed Derivative}
+Mixed Derivative Term:
+\bit
+\item Positive coefficient: 
+\bbbb
+V_{xy}(x_m,y_n,\tau) \approx \frac{1}{2}(\Delta _{x,-}\Delta_{y,-}+\Delta_{x,+}\Delta_{y,+}) V(x_m,y_n,\tau).
+\eeee
+
+\pause
+
+\item Negative coefficient:
+\bbbb
+V_{xy}(x_m,y_n,\tau) \approx \frac{1}{2}(\Delta _{x,+}\Delta_{y,-}+\Delta_{x,-}\Delta_{y,+}) V(x_m,y_n,\tau).
+\eeee
+\eit
+
+\end{frame}
+
+%%%%
+
+\begin{frame}
+\frametitle{Our Approach--Advection Terms}
+\bit
+\item Positive coefficient: Forward Difference Approximation
+\vspace{2mm}
+\item Negative coefficient: Backward Difference Approximation
+\eit
+\end{frame}
+
+%%%%
+
+\begin{frame}
+\frametitle{Semi-Discretised System}
+Semi-discretized system:
+\bbbb
+\label{semi}
+\textbf{u}'(\tau) = \textbf{M}\textbf{u}(\tau)+\textbf{f}(\tau),
+\eeee
+
+The solution is 
+\bbbb
+\mathbf{u}(\tau) = e^{\tau \mathbf{M}}\mathbf{u}(0)-\int_0^{\tau} e^{(\tau -s)\textbf{M}}\textbf{f}(s)\text{d}s.
+\eeee
+
+\end{frame}
+
+%%%%
+
+\begin{frame}
+\frametitle{Definition of Stability of Semi-Discretised Systems}
+
+\begin{definition}[Stability of Semi-Discretised Systems]
+The semi-discretised system is stable if for every $\tau^*>0$, there exists a constant $c(\tau^*)>0$ such that
+\bbb
+\|e^{\tau \mathbf{M}}\| \leq c(\tau^*),\quad \tau\in[0,\tau^*].
+\eee
+where $\|\cdot\|$ is an appropriate matrix norm.
+
+\end{definition}
+
+
+\end{frame}
+
+%%%%
+
+\begin{frame}
+\frametitle{Gerschgorin's Circle and Exponential Behavior Theorems}
+\begin{theorem}[Gerschgorin's Circle Theorem/Brauer's Theorem]
+
+Let $M_s$ be the sum of the moduli of the elements along the $s$th row of matrix $\textbf{M}$ excluding the diagonal element $m_{ss}$. Then each eigenvalue of $\textbf{M}$ lies inside or on the boundary of at least one of the circles $|\lambda -m_{ss}|=M_s$. 
+\end{theorem}
+
+\pause
+
+\begin{theorem}[Exponential Behavior]
+$e^{t\textbf{A}}$ tends to 0 in certain norm hence in all norms, as $t$ tends to $+\infty$ , if and only if all the eigenvalues of $\textbf{A}$ have strictly negative real parts.
+\end{theorem}
+\pause
+\begin{theorem}
+For $\rho\in[-1,1]$, the semi-discretised system is stable.
+\end{theorem}
+\end{frame}
+
+%%%%
+
+\section{III. Numerical Experiments}
+\begin{frame}
+\frametitle{Domain Truncation}
+
+\bbbb
+V_\tau = \frac{1}{2}yV_{xx}+\rho \sigma yV_{xy}+\frac{1}{2}\sigma^2 yV_{yy}-\l(\frac{1}{2}y-r\r)V_x+\kappa (\eta -y)V_y,
+\eeee	
+										
+
+\bbbb
+V(x,y,0) &=& \max\l(1-e^{x},0\r),~~~ x\in [-X,~X],~~ y\in [0,~Y],\\
+V(-X,y,\tau) &=& 1,~~~y\in [0,~Y], ~~\tau\in\mathbb{R}^+,\\
+V(X,y,\tau) &=& 0,~~~y\in [0,~Y], ~~\tau\in\mathbb{R}^+,\\
+V(x,0,\tau) &=& \max\l(1-e^{x},0\r),~~~ x\in [-X,~X], ~~\tau\in\mathbb{R}^+.\\
+V_y(x,Y,\tau) &=& 0,~~~ x\in [-X,~X],~~ \tau\in\mathbb{R}^+,
+\eeee
+
+\end{frame}
+
+%%%%
+
+\begin{frame}
+\frametitle{Solution Surface}
+\begin{figure}
+\begin{center}
+
+{\epsfig{file=c123017surf1.eps,width=4in,height=2in}}
+% {\epsfig{file=solution.eps,width=4in,height=2in}}
+
+\caption{Price of an European put option}\label{figure:1}
+\end{center}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Convergence Surface}
+\begin{figure}
+\begin{center}
+
+{\epsfig{file=c123017conv1.eps,width=4in,height=2in}}
+% {\epsfig{file=c122617a.eps,width=4in,height=2in}}
+
+\caption{Rate of convergence $\rho^h_{PW}$ surface at  $T=0.5.$ The figure indicates approximately an order one rate of convergence.}\label{figure:5}
+\end{center}
+\end{figure}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{IV. Future Work :}
+\begin{frame}
+\frametitle{Future Work}
+\bit
+\item Exponential Splitting 
+
+\item Adaptive Grids
+
+\item Higher-Order Schemes
+
+\item Free Boundary Value Problems
+
+\eit
+
+\end{frame}
+\section{V. The End}
+\begin{frame}
+\frametitle{}
+\begin{center}
+    {\green\huge Thank You}
+\end{center}
+\end{frame}
+
+\end{document}
